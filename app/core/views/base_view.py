@@ -7,15 +7,24 @@ from app.core.metaclasses.base_view_metaclasses import BaseViewMetaclass
 
 class BaseView(MethodView, metaclass=BaseViewMetaclass):
     schema_class = None
-    records_query = None
+
+    def get_records_query(self):
+        if hasattr(self, "schema"):
+            raise ValueError(
+                f"get_records_query não implementada para a view {self.__class__.__name__}. Certifique-se de implementar a função 'get_records_query'."
+            )
 
     def get_schema(self):
         if hasattr(self, "schema"):
             return self.schema
 
-    def get_schema_serialize(self, paginate: bool = True):
+    def get_schema_serialize(self):
         if hasattr(self, "schema"):
-            model_instances = self.records_query()
+            paginate: bool = request.args.get(
+                "page", None
+            ) is not None and request.args.get("per_page", None)
+
+            model_instances = self.get_records_query()
 
             if isinstance(model_instances, list):
                 if paginate:
@@ -41,8 +50,8 @@ class BaseView(MethodView, metaclass=BaseViewMetaclass):
                     }
                 else:
                     return [
-                        self.schema.model_validate(record).model_dump()
-                        for record in model_instances
+                        self.schema.model_validate(model_instance).model_dump()
+                        for model_instance in model_instances
                     ]
 
             return self.schema.model_validate(model_instances).model_dump()
